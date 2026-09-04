@@ -1,0 +1,1325 @@
+---
+title: "2"
+published: 2026-09-03
+description: 在7月的docker学习笔记
+date: 2026-09-03
+updated: 2026-09-03
+tags:
+  - docker
+image: ./cover.jpg
+category: docker
+draft: false
+author: winskyx
+---
+# 代理
+
+  
+
+```shell
+
+sudo mkdir -p /etc/systemd/system/docker.service.d
+
+sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf <<EOF
+
+[Service]
+
+Environment="HTTP_PROXY=http://192.168.133.1:10811"
+
+Environment="HTTPS_PROXY=http://192.168.133.1:10811"
+
+Environment="NO_PROXY=localhost,127.0.0.1"
+
+EOF
+
+```
+
+  
+  
+  
+
+# Docker镜像源
+
+  
+
+- docker.xuanyuan.me
+
+- docker.1ms.run
+
+- docker.cattt.net
+
+- docker.m.ixdev.cn
+
+- d.yydy.link:2023
+
+- hub.mirrorify.net
+
+
+## 2025年目前还可用的docker镜像源：
+
+  
+
+- docker.1ms.run
+
+  
+
+- docker.domys.cc
+
+  
+
+- docker.imgdb.de
+
+  
+
+- docker-0.unsee.tech
+
+  
+
+- docker.hlmirror.com
+
+  
+
+- cjie.eu.org
+
+  
+
+- docker.m.daocloud.io
+
+  
+
+- hub.rat.dev
+
+  
+
+- docker.1panel.live
+
+  
+
+- docker.rainbond.cc
+
+  
+
+  ·
+
+  
+
+## Docker安装Nginx
+
+  
+
+```
+
+#1、搜索镜像      
+
+docker search nginx  需要梯子
+
+#2、拉取镜像      
+
+docker pull nginx    设置好镜像源后拉取
+
+#3、容器内部署nginx  
+
+docker run -d --name nginx01 -p 3344:80 nginx
+
+             设置容器名 宿主机端口    容器内映射端口
+
+
+```
+
+  
+  
+  
+
+## Docker运行Tomcat
+
+  
+
+```
+
+#官方的使用
+
+docker run -it --rm tomcat
+
+#我们之前启动的都是后台，停止了容器之后，容器还是可以查到 docker run -it --rm,一般用来测试，用完就删除
+
+#下载再启动
+
+docker pull tomcat
+
+#启动运行
+
+docker run -d -p 3355:8080 --name tomcat01 tomcat
+
+```
+
+  
+
+运行后测试
+
+![image-20260704231620584.png](https://tu.winskyx.xyz/file/blog/wenzhang/1788452687190_image-20260704231620584.png)
+
+成功运行并访问
+
+进入容器
+
+  
+
+```
+docker exec -it tomcat01 /bin/bash
+```
+
+
+问题：
+
+  
+
+```
+
+1、Linux命令少
+
+2、没有webapps。 某些镜像的原因，默认为最小的镜像，所有不必要的都剔除掉。保证最小可运行环境
+
+  
+
+```
+
+  
+  
+  
+  
+  
+
+思考：每次部署项目都要进入容器十分麻烦，如果可以在容器外部提供一个映射路径，webapps，在外部放置项目，自动同步到内部就好了
+
+  
+  
+  
+  
+  
+
+## 部署ES+Kibana
+
+  
+
+```shell
+
+#es 暴露的端口很多
+
+#es 十分的耗内存
+
+#es 的数据一般需要放置到安全目录挂载
+
+# --net somenetwork? 网络配置
+
+```
+
+  
+  
+  
+
+```#shell
+
+运行Elasticsearch
+
+原版
+
+$ docker run -d --name elasticsearch --net somenetwork -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:tag
+
+修改
+
+$ docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:9.4.3
+
+#启动了 Linux容易卡住，因为吃资源 docker stats 查看CPU的状态
+
+#es十分耗内存，1.xG    1核2G
+
+#停止整个docker[一般不建议]
+
+# 查看docker stats
+
+#测试一下es是否成功了
+
+#赶紧关闭，增加内存的限制
+
+curl localhost:9200/9300
+
+连接重置问题
+
+# 1. 删除旧容器
+
+docker rm -f elasticsearch
+
+# 2. 重新创建，关闭安全（HTTP 明文访问）
+
+docker run -d --name elasticsearch \
+
+  -p 9200:9200 -p 9300:9300 \
+
+  -e "discovery.type=single-node" \
+
+  -e "network.host=0.0.0.0" \
+
+  -e "xpack.security.enabled=false" \
+
+  -e "xpack.security.enrollment.enabled=false" \
+
+  elasticsearch:9.4.3
+
+#关闭，增加内存的限制
+
+```
+
+  
+
+![image-20260705023722554](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260705023722554.png)
+
+  
+
+```
+
+#修改配置文件　-e 环境配置修改
+
+docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xms512m" elasticsearch:9.4.3
+
+```
+
+  
+
+```
+
+#关闭安全功能后的ES并将最大内存限制为521M
+
+docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xms512m" -e "xpack.security.enrollment.enabled=false" -e "xpack.security.enabled=false"  elasticsearch:9.4.3
+
+```
+
+## 可视化
+
+- potainer-ce
+
+
+```shell
+
+docker run -d -p 8088:9000 \ --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+
+--restart=always 重启后自动拉起容器
+
+-----------------------------------------------------
+
+docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts
+
+-----------------------------------------------------
+
+```
+
+  
+
+```
+
+对-p 8088:9000 和 9443:9443这两个端口的疑惑
+
+#8088端口无法进行登录操作，而9443端口可以登入系统
+
+以下来自deepseek
+
+1. 为什么 8000 端口“无法使用”？
+
+在 Portainer 容器内部，8000 端口是专门留给 Portainer Edge Agent（边缘代理） 使用的。
+
+它的作用是用来接收远程边缘环境（Edge Environments）的回连请求，属于底层通讯隧道（Tunnel），而不是用来提供网页界面（Web UI）的。
+
+你直接用浏览器访问 http://你的IP:8000，Docker 虽然把流量转进去了，但容器内的服务不认得这种 HTTP 浏览请求，所以会无响应或报错，看起来就像“无法使用”。
+
+2. 为什么 9443 端口可以登入？
+
+你发现 9443 能登入，这完全正确，因为 Portainer 的 HTTPS Web 界面默认就运行在 9443 端口。
+
+-p 9443:9443 把容器内的 Web 服务端口暴露了出来。
+
+注意：因为默认用的是 HTTPS（自签名证书），你必须使用 https:// 协议访问，即 https://你的服务器IP:9443。如果输成 http://，也会报错。
+
+```
+
+Rancher(CI/CD再用)
+
+什么是portainer
+
+Docker图形化界面管理工具，提供一个后台面板供给操作
+
+
+```
+
+获取账户Token
+
+docker logs 容器ID
+
+要在最新的日志中获取Token
+
+因为Token使用只有5分钟
+
+```
+
+  
+  
+  
+
+![image-20260705225351198](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260705225351198.png)
+
+  
+  
+  
+
+登录后进入可视化面板
+
+  
+
+![image-20260705225822771](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260705225822771.png)
+
+  
+
+# Docker镜像讲解
+
+  
+
+如何得到镜像：
+
+  
+
+- 从远程仓库下载
+
+- 朋友拷贝
+
+- 自己制作一个镜像DockerFile
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+# Commit镜像--如何提交一个新的副本
+
+  
+
+```
+
+docker commit 提交容器成为一个新的副本
+
+  
+
+#命令和git原理类似
+
+docker commit -m="提交的描述信息" -a="作者" 容器id 目标镜像名:[TAG]
+
+  
+
+#将操作过的容器通过commit提交为一个镜像，以后就可以使用修改过的镜像，这就是自己的一个修改的镜像
+
+```
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+# 容器数据卷
+
+  
+
+## 什么是容器数据卷
+
+  
+
+docker 的理念回顾
+
+将应用和环境打包成一个镜像
+
+数据?如果数据都在容器中，那么我们容器删除，数据就会丢失！需求：数据可以持久化
+
+MySQL，容器删了，删库跑路！需求：MySQL数据可以存储在本地！
+
+容器之间有一个数据共享的技术！
+
+这就是卷技术！目录的挂载，将我们容器内的目录，挂载到Linux上面！
+
+![image-20260706175718311](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706175718311.png)
+
+  
+
+总结一句话：容器的持久化和同步操作！容器间也是可以数据共享的！
+## 使用数据卷
+
+  
+
+> 方式一：直接使用命令来挂载 -v
+
+
+```
+
+docker run -it -v 主机目录:容器内目录
+
+#启动的时候我们可以通过 docker inspect 容器id
+
+```
+
+
+![image-20260706182307459](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706182307459.png)
+
+
+![image-20260706183445743](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706183445743.png)
+
+  
+停止容器
+
+宿主机上修改文件
+
+启动容器
+
+容器内的数据
+
+结论：数据卷绑定后的容器启动时会将宿主机上的数据导入容器内
+
+好处：我们以后修改只需要在本地修改即可，容器内会自动同步
+
+## 实战：安装MySQL
+
+思考：MySQL的数据持久化的问题！
+
+```shell
+
+#获取镜像
+
+docker pull mysql:[TAG]
+
+#运行容器，需要做数据挂载！ #安装启动mysql，需要配置密码的，这是要注意点！
+
+原
+
+-e MYSQL_ROOT_PASSWORD=my-secret-pw
+
+后
+
+-e MYSQL_ROOT_PASSWORD=123456
+
+-d 后台运行
+
+-p 端口映射
+
+-v 卷挂载
+
+-e 环境配置
+
+--name 容器名字
+
+docker run -d -p 3310:3306 -v /home/mysql/conf:/etc/mysql/conf.d -v /home/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql
+
+#启动成功在之后，我们在本地使用Navicat来测试一下
+
+#Navicat 连接192.168.133.5【服务器IP】的 3310---  3310和容器内的3306映射，这个时候我们就可以连接上了
+
+  
+
+```
+
+  
+
+![image-20260706204909084](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706204909084.png)
+
+成功连接并对Linux服务器挂载配置
+
+在数据库工具新建一个叫test的数据库
+
+
+![image-20260706205125496](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706205125496.png)
+
+发现Linux上的文件也同步了
+
+[上]创建前
+
+![image-20260706205230957](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706205230957.png)
+
+[下]创建后
+
+这样子即使我们把容器删除，我们挂载到本地的数据卷依旧没有丢失，这就实现了容器数据持久化功能
+
+## 具名和匿名挂载
+
+```shell
+
+#匿名挂载
+
+-v 容器内路径！
+
+docker run -d -P --name nginx01 -v /etc/nginx nginx
+
+#查看所有的 volume情况
+
+docker volume ls
+
+DRIVER    VOLUME NAME
+
+local     281d02374ccc8794bbfaaf87f339c8abff29316117d4efab7874745518f93575
+
+local     d1c3e3ca9fdb7b914b7e3398188b526b92e5f3f734916c883d89f63480d6cea7
+
+local     d47b9d9de0b73296cf5b159eca5501767f1c4a88a5566a008a117c1beb82a63a
+
+local     portainer_data
+
+#这里发现，这种就是匿名挂载，我们在 -v 只写了容器内的路径，没有写容器外的路径！
+
+```
+
+  
+
+![image-20260706215123498](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260706215123498.png)
+
+
+
+```
+
+#所有docker容器内的卷，没有指定目录的情况下都是在/var/lib/docker/volumes/****/_data
+
+```
+
+通过具名挂载可以方便的找到我们的一个卷，大多数情况在使用**具名挂载**
+
+
+```
+
+#如何确定是具名挂载还是指定路径挂载
+
+-v 容器内路径 #匿名挂载
+
+-v 卷名:容器内路径 #具名挂载
+
+-v /宿主机路径：：容器内路径 #指定路径挂载
+
+```
+
+拓展
+
+```
+
+#通过 -v 容器内路径,ro rw 改变读写权限
+
+ro readonly #只读
+
+rw readwrite   #读写
+
+#一旦这个设置了容器权限，容器对我们挂载出来的内容就有限定了
+
+docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx:ro nginx
+
+docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx:rw nginx
+
+#ro 只要看到ro就说明这个路径只能通过宿主机来操作，容器内无法操作
+
+```
+
+## 初识DockerFile
+
+DockerFile就是用来构建docker镜像的构建文件！命令脚本！先体验一下！
+
+通过这个脚本可以生成镜像，镜像是一层一层的，脚本一个个的命令，每个命令都是一层！
+
+
+```shell
+
+#创建一个dockerfile文件，名字可以随机，建议Dockerfile
+
+#文件中的内容  指令(大写) 参数
+
+FROM centos
+
+VOLUME ["volume01","volume02"]
+
+CMD echo "-----end-----"
+
+CMD /bin/bash
+
+#这里的每个命令，都是镜像的一层 !
+
+```
+
+![image-20260707004543688](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707004543688.png)
+
+构建镜像出现了一个huangpeijian2004/centos的镜像
+
+![image-20260707005542169](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707005542169.png)
+
+这个目录就是我们生成镜像的时候自动挂载的，数据卷目录
+
+这个卷和外部有一个**同步的目录**！
+
+![image-20260707012021873](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707012021873.png)
+
+查看一下卷挂载的路径
+
+![image-20260707012321457](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707012321457.png)
+
+  
+
+测试一下刚才的文件是否同步
+
+在容器内通过touch container.txt指令在volume01文件夹内生成了一个文件
+
+在虚拟机外的挂载目录可以看见该文件
+
+
+![image-20260707012536449](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707012536449.png)
+
+假设构建镜像时候没有挂载卷，要手动镜像挂载 -v 卷名 容器内路径!
+
+## 数据卷容器
+
+多个mysql同步数据！
+
+![image-20260707150828757](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707150828757.png)
+
+  
+
+```
+
+#启动三个容器，通过我们刚才自己的写镜像启动
+
+```
+
+
+![image-20260707153205954](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707153205954.png)
+
+![image-20260707152805510](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707152805510.png)
+
+
+docker01创建的内容同步到了docker02
+
+
+![image-20260707153539583](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707153539583.png)
+
+特性
+
+删除掉docker01挂载点容器
+  
+
+![image-20260707154313283](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707154313283.png)
+
+发现挂载的数据卷容器被删除后数据依旧保留
+
+![image-20260707154338164](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707154338164.png)
+
+
+# DockerFile
+
+DockerFile是用来构建docker镜像的文件！命令参数脚本！
+
+构建步骤
+
+1、编写一个dockerfile文件
+
+2、docker build构建成为一个镜像
+
+3、docker run 运行镜像
+
+4、docker push 发布镜像（DockerHub、阿里云镜像仓库）
+
+很多官方镜像包都是基础包，很多功能没有，我们通常会自己搭建自己的镜像
+
+## DockerFile构建过程
+
+**基础知识：**
+
+1、每个保留关键字（指令）都是必须是**大写字母**
+
+2、执行从上到下顺序执行
+
+3、#表示注释
+
+4、每一个指令都会创建提交一个新的镜像层，并提交！
+
+  
+
+![image-20260707174807605](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707174807605.png)
+
+  
+
+dockerfile是面向开发的，我们以后要发布项目，做镜像，就需要编写dockefile文件，这个文件十分简单！
+
+Docker镜像逐渐成为企业交付的标准，必须要掌握！
+
+步骤：开发，部署，运维。。。缺一不可
+
+DockerFile:构建文件，定义了一切的步骤，源代码
+
+DockerImages：通过DockerFile构建生成的镜像，最终发布和运行的产品
+
+Docker容器：容器就是镜像运行起来提供服务器
+
+  
+
+![image-20260707192249554](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260707192249554.png)
+
+  
+
+## 指令详解
+
+| Dockerfile 指令 | 说明                                                         |
+
+| :-------------- | :----------------------------------------------------------- |
+
+| FROM            | 指定基础镜像，用于后续的指令构建。                           |
+
+| MAINTAINER      | 指定Dockerfile的作者/维护者。（已弃用，推荐使用LABEL指令）   |
+
+| LABEL           | 添加镜像的元数据，使用键值对的形式。                         |
+
+| RUN             | 在构建过程中在镜像中执行命令。                               |
+
+| CMD             | 指定容器创建时的默认命令。（可以被覆盖）                     |
+
+| ENTRYPOINT      | 设置容器创建时的主要命令。（不可被覆盖）                     |
+
+| EXPOSE          | 声明容器运行时监听的特定网络端口。                           |
+
+| ENV             | 在容器内部设置环境变量。                                     |
+
+| ADD             | 将文件、目录或远程URL复制到镜像中。                          |
+
+| COPY            | 将文件或目录复制到镜像中。                                   |
+
+| VOLUME          | 为容器创建挂载点或声明卷。                                   |
+
+| WORKDIR         | 设置后续指令的工作目录。                                     |
+
+| USER            | 指定后续指令的用户上下文。                                   |
+
+| ARG             | 定义在构建过程中传递给构建器的变量，可使用 "docker build" 命令设置。 |
+
+| ONBUILD         | 当该镜像被用作另一个构建过程的基础时，添加触发器。           |
+
+| STOPSIGNAL      | 设置发送给容器以退出的系统调用信号。                         |
+
+| HEALTHCHECK     | 定义周期性检查容器健康状态的命令。                           |
+
+| SHELL           | 覆盖Docker中默认的shell，用于RUN、CMD和ENTRYPOINT指令。      |
+
+DockerFile的指令
+
+```
+
+FROM        #基础镜像，一切从这里开始构建
+
+MAINTAINER     #镜像是谁写的，姓名+邮箱
+
+RUN         #镜像构建的时候需要运行的命令
+
+ADD         #步骤，tomcat镜像，这个tomcat压缩包！添加内容
+
+WORKDIR        #镜像的工作目录
+
+VOLUME         #挂载的目录
+
+EXPOSE         #保留端口配置
+
+CMD            #指定这个容器启动的时候要运行的命令,只有最后一个会生效，可被替代
+
+ENTRYPOINT     #指定这个容器启动的时候要运行的命令，可以追加命令
+
+ONBUILD        #当构建一个被继承 DockerFile 这个时候就会运行 ONBUILD 的指令，触发指令
+
+COPY        #类似ADD，将我们文件拷贝到镜像中
+
+ENV            #构建的时候设置环境变量
+
+```
+
+## 实战测试
+
+  
+
+> 创建一个自己的centos
+
+  
+
+```shell
+
+#编写DockerFile
+
+root@huangpeijian20-virtual-machine:/home/dockerfile# vim mydockerfile-centos
+
+root@huangpeijian20-virtual-machine:/home/dockerfile# cat mydockerfile-centos
+
+FROM centos
+
+MAINTAINER huangpeijian<winskyx@outlook.com>
+
+ENV MYPATH /usr/local
+
+WORKDIR $MYPATH
+
+RUN yum -y install vim
+
+RUN yum -y install net-tools
+
+EXPOSE 80
+
+CMD echo $MYPATH
+
+CMD echo "--END--"
+
+CMD /bin/bash
+
+#2、通过这个文件构建镜像
+
+```
+
+> 因为2026年centos停止维护，所以改为了Ubuntu
+
+```shell
+
+# 使用 Ubuntu 22.04 LTS 作为基础镜像
+
+FROM ubuntu:22.04
+
+# 维护者信息（MAINTAINER 已弃用，改用 LABEL）
+
+LABEL maintainer="huangpeijian<winskyx@outlook.com>"
+
+# 环境变量和工作目录（保持不变）
+
+ENV MYPATH /usr/local
+
+WORKDIR $MYPATH
+
+# 更新软件源并安装所需包（vim 和 net-tools）
+
+RUN apt-get update && \
+
+    apt-get install -y vim net-tools && \
+
+    apt-get clean && \
+
+    rm -rf /var/lib/apt/lists/*
+
+# 暴露端口
+
+EXPOSE 80
+
+# 启动时依次输出路径、结束标志，然后进入交互式 bash
+
+CMD echo $MYPATH && echo "--END--" && /bin/bash
+
+```
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+我们平时拿到一个镜像，可以研究一下它是怎么做的了
+
+![image-20260708010417021](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260708010417021.png)
+
+## 自定义网络
+
+> 查看所有的Docker网络
+
+![image-20260710155101016](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710155101016.png)
+
+网络模式
+
+bridge：桥接docker  （默认，自己创建也使用bridge模式)
+
+none：不配置网络
+
+host：和宿主机共享网络
+
+container：容器网络连通！（用得少，局限大
+
+```shell
+
+#我们直接启动的命令 --net bridge，而这个就是我们的docker0
+
+docker run -d -P --name tomcat01 tomcat
+
+docker run -d -P --name tomcat01 --net bridge tomcat
+
+#docker0特点，默认，域名不能访问， ---link可以打通连接
+
+#我们可以自定义一个网络
+
+#--driver bridge
+
+#subnet 192.168.0.0/16     192.168.0.2~192.168.255.254
+
+root@huangpeijian20-virtual-machine:/home/huangpeijian20# docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
+
+root@huangpeijian20-virtual-machine:/home/huangpeijian20# docker network ls
+
+NETWORK ID     NAME      DRIVER    SCOPE
+
+d1c950e5234c   bridge    bridge    local
+
+cc6215ca0357   host      host      local
+
+1dbb6a6d4c96   mynet     bridge    local
+
+617bf7b5ccf7   none      null      local
+
+root@huangpeijian20-virtual-machine:/home/huangpeijian20#
+
+```
+
+我们自己的网络就创建好了
+  
+![image-20260710162327228](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710162327228.png)
+
+再次测试ping连接
+
+![image-20260710164410772](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710164410772.png)
+
+![image-20260710164419758](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710164419758.png)
+
+现在不使用--link也可以ping名字了
+
+我们自定义的网络docker都已经帮我们维护好了对应的关系，推荐平时这样使用网络
+
+好处：
+
+redis-不同的集群使用不同的网络，保证集群是安全和健康的
+
+mysql-不同的集群使用不同的网络，保证集群是安全和健康的
+## 网络连通
+
+  
+
+![image-20260710180448201](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710180448201.png)
+
+  
+
+```shell
+
+#测试打通 tomcat01 - mynet
+  
+#连通之后就是将tomcat01 放到了 mynet网络下
+
+#一个容器两个ip地址！
+
+```
+
+Connect将tomcat01加入mynet网路
+
+发现可以ping通了
+
+![image-20260710181338270](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710181338270.png)
+
+tomcat02依旧无法ping通另一个虚拟网络
+
+![image-20260710181459660](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260710181459660.png)
+
+> 如果要跨网络操作，就需要使用docker network connect连通
+## 实战：部署redis集群
+
+```shell
+
+#通过脚本创建6个redis配置
+
+#!/bin/bash
+
+# 生成 6 个 Redis 集群节点配置文件
+
+BASE_DIR="/mydata/redis"
+
+START_IP_PREFIX="172.38.0.1"   # 最终拼接为 172.38.0.11 ~ 172.38.0.16
+
+for port in $(seq 1 6); do
+
+    # 1. 创建节点目录
+
+    NODE_DIR="${BASE_DIR}/node-${port}"
+
+    mkdir -p "${NODE_DIR}/conf"
+
+    # 2. 生成配置文件（使用 cat 重定向）
+
+    cat > "${NODE_DIR}/conf/redis.conf" <<EOF
+
+# Redis 节点 ${port} 配置文件
+
+port 6379
+
+bind 0.0.0.0
+
+# 开启集群模式
+
+cluster-enabled yes
+
+cluster-config-file nodes-${port}.conf
+
+cluster-node-timeout 5000
+
+# 集群对外广播地址（用于 Docker 跨主机或固定 IP 场景）
+
+cluster-announce-ip ${START_IP_PREFIX}${port}
+
+cluster-announce-port 6379
+
+cluster-announce-bus-port 16379
+
+  
+
+# 持久化
+
+appendonly yes
+
+appendfilename "appendonly-${port}.aof"
+
+  
+
+# 其他推荐配置
+
+protected-mode no
+
+daemonize no
+
+logfile ""
+
+EOF
+
+    echo "✅ 已生成: ${NODE_DIR}/conf/redis.conf (广播 IP: ${START_IP_PREFIX}${port})"
+
+done
+
+echo "🎉 全部 6 个配置文件生成完毕，位于 ${BASE_DIR}"
+
+  
+  
+
+export port=1
+
+  
+
+docker run -p 637${port}:6379 -p 1637${port}:16379 --name redis-${port} \
+
+-v /mydata/redis/node-${port}/data:/data \
+
+-v /mydata/redis/node-${port}/conf/redis.conf:/etc/redis/redis.conf \
+
+-d --net redis --ip 172.38.0.1${port} redis:8.8 redis-server /etc/redis/redis.conf
+
+  
+  
+
+docker run -p 6371:6379 -p 16371:16379 --name redis-1 \
+
+-v /mydata/redis/node-1/data:/data \
+
+-v /mydata/redis/node-1/conf/redis.conf:/etc/redis/redis.conf \
+
+-d --net redis --ip 172.38.0.11 redis:latest redis-server /etc/redis/redis.conf
+
+  
+
+docker run -p 6372:6379 -p 16372:16379 --name redis-2 \
+
+-v /mydata/redis/node-2/data:/data \
+
+-v /mydata/redis/node-2/conf/redis.conf:/etc/redis/redis.conf \
+
+-d --net redis --ip 172.38.0.12 redis:latest redis-server /etc/redis/redis.conf
+
+  
+
+docker run -p 6372:6379 -p 16373:16379 --name redis-3 \
+
+-v /mydata/redis/node-3/data:/data \
+
+-v /mydata/redis/node-3/conf/redis.conf:/etc/redis/redis.conf \
+
+-d --net redis --ip 172.38.0.13 redis:latest redis-server /etc/redis/redis.conf
+
+  
+  
+
+```
+
+  
+
+```shell
+
+#创建集群
+
+redis-cli --cluster create \
+
+  172.38.0.11:6379 \
+
+  172.38.0.12:6379 \
+
+  172.38.0.13:6379 \
+
+  172.38.0.14:6379 \
+
+  172.38.0.15:6379 \
+
+  172.38.0.16:6379 \
+
+  --cluster-replicas 1
+
+```
+
+  
+
+```shell
+
+root@67c7583e9c88:/data# redis-cli --cluster create \
+
+  172.38.0.11:6379 \
+
+  172.38.0.12:6379 \
+
+  172.38.0.13:6379 \
+
+  172.38.0.14:6379 \
+
+  172.38.0.15:6379 \
+
+  172.38.0.16:6379 \
+
+  --cluster-replicas 1
+
+>>> Performing hash slots allocation on 6 nodes...
+
+Master[0] -> Slots 0 - 5460
+
+Master[1] -> Slots 5461 - 10922
+
+Master[2] -> Slots 10923 - 16383
+
+Adding replica 172.38.0.15:6379 to 172.38.0.11:6379
+
+Adding replica 172.38.0.16:6379 to 172.38.0.12:6379
+
+Adding replica 172.38.0.14:6379 to 172.38.0.13:6379
+
+M: 9663811538575a6b9b91ace6b25742b295096cfe 172.38.0.11:6379
+
+   slots:[0-5460] (5461 slots) master
+
+M: d7efff79c99d4b017fd992ed5d3e7a30e39d3aea 172.38.0.12:6379
+
+   slots:[5461-10922] (5462 slots) master
+
+M: 6fcc5fac8e6b835791cca16af8c5c63f6f7be2dc 172.38.0.13:6379
+
+   slots:[10923-16383] (5461 slots) master
+
+S: 79103084818dc8348ace9c070f2a0ae509bf4df6 172.38.0.14:6379
+
+   replicates 6fcc5fac8e6b835791cca16af8c5c63f6f7be2dc
+
+S: 42d1b484f9d4131ac7fb423a6793dcb760a0974c 172.38.0.15:6379
+
+   replicates 9663811538575a6b9b91ace6b25742b295096cfe
+
+S: 558035f360f0efeed9b48febcfe8d525106ac9fa 172.38.0.16:6379
+
+   replicates d7efff79c99d4b017fd992ed5d3e7a30e39d3aea
+
+Can I set the above configuration? (type 'yes' to accept): yes
+
+>>> Nodes configuration updated
+
+>>> Assign a different config epoch to each node
+
+>>> Sending CLUSTER MEET messages to join the cluster
+
+Waiting for the cluster to join
+
+.
+
+>>> Performing Cluster Check (using node 172.38.0.11:6379)
+
+M: 9663811538575a6b9b91ace6b25742b295096cfe 172.38.0.11:6379
+
+   slots:[0-5460] (5461 slots) master
+
+   1 additional replica(s)
+
+S: 42d1b484f9d4131ac7fb423a6793dcb760a0974c 172.38.0.15:6379
+
+   slots: (0 slots) slave
+
+   replicates 9663811538575a6b9b91ace6b25742b295096cfe
+
+M: 6fcc5fac8e6b835791cca16af8c5c63f6f7be2dc 172.38.0.13:6379
+
+   slots:[10923-16383] (5461 slots) master
+
+   1 additional replica(s)
+
+M: d7efff79c99d4b017fd992ed5d3e7a30e39d3aea 172.38.0.12:6379
+
+   slots:[5461-10922] (5462 slots) master
+
+   1 additional replica(s)
+
+S: 79103084818dc8348ace9c070f2a0ae509bf4df6 172.38.0.14:6379
+
+   slots: (0 slots) slave
+
+   replicates 6fcc5fac8e6b835791cca16af8c5c63f6f7be2dc
+
+S: 558035f360f0efeed9b48febcfe8d525106ac9fa 172.38.0.16:6379
+
+   slots: (0 slots) slave
+
+   replicates d7efff79c99d4b017fd992ed5d3e7a30e39d3aea
+
+[OK] All nodes agree about slots configuration.
+
+>>> Check for open slots...
+
+>>> Check slots coverage...
+
+[OK] All 16384 slots covered.
+
+root@67c7583e9c88:/data#
+
+  
+
+```
+
+  
+
+Docker 搭建redis集群完成
+
+  
+
+![image-20260711021046709](C:\Users\AcidEnzyme\AppData\Roaming\Typora\typora-user-images\image-20260711021046709.png)
+
+  
+
+我们使用了docker技术之后，所有的技术都会慢慢的变得简单起来
+
+  
+
+# Springboot微服务打包Docker镜像
+
+  
+
+1、构建Springboot项目
+
+2、打包应用
+
+3、编写dockerfile
+
+4、构建镜像
+
+5、发布运行！
+
+以后我们使用了Docker之后，可以只交付镜像
