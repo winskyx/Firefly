@@ -3,7 +3,7 @@ title: Maven
 published: 2026-09-10
 description: JavaWeb阶段学习
 date: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 tags:
   - JavaWeb
 image: ./cover.jpg
@@ -127,4 +127,40 @@ Maven由于它的约定大于配置，之后可能会遇到我们写的配置文
     </resources>
     ......
 </build>
+```
+
+
+## Tomcat版本差异
+
+
+Tomcat 10 之后，Servlet API 的包名从 `javax.servlet.*` 迁移到了 `jakarta.servlet.*`。即使类名和方法完全一致，由于包名不同，它们在 Java 中就是**两个完全不同的类**。Tomcat 的 `WebAppClassLoader` 从你的应用里加载了基于 `javax` 的 `HelloServlet`，而 Tomcat 自身系统类加载器加载的是 `jakarta.servlet.Servlet`，两者不兼容，因此抛出类型转换异常。
+
+**解决方案(以下内容为DeepSeek生成)**
+**1.修改源代码中的导入语句**
+```java
+将 Servlet 类及相关接口中的所有 `javax.servlet` 导入，替换为 `jakarta.servlet`。
+
+// 修改前
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+// 修改后
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+```
+**2.更新项目依赖**
+在 `pom.xml` (Maven) 或 `build.gradle` (Gradle) 中，将旧的 `javax.servlet-api` 依赖替换为 `jakarta.servlet-api`。对于 Tomcat 11，应使用 **6.0.0** 或更高版本
+```xml
+<!-- Maven 示例 -->
+<dependency>
+    <groupId>jakarta.servlet</groupId>
+    <artifactId>jakarta.servlet-api</artifactId>
+    <version>6.0.0</version> <!-- Tomcat 11 对应版本 -->
+    <scope>provided</scope>
+</dependency>
 ```
