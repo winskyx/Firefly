@@ -157,6 +157,7 @@ __默认请求路径__
 
 ## ServletContext
 
+### 共享数据
 web容器启动的时候，它会为每个web程序都创建一个对应的ServletContext对象，它代表了当前的web应用；
 - 共享数据
    我在这个Servlet中保存的数据，可以在另外一个Servlet中拿到
@@ -223,3 +224,98 @@ public class GetServlet extends HttpServlet {
   先访问/hello，创建一个值为winskyx名称为name的Context属性，再访问/getServlet获取Context的值
   输出结果:
   __name:winskyx__
+
+
+### 获取初始化参数
+
+```xml
+<!-- 配置一些web应用初始化参数 -->  
+  <context-param>  
+    <param-name>url</param-name>  
+    <param-value>jdbc:mysql:localhost:3306/mybatis</param-value>  
+  </context-param>
+```
+
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+    ServletContext context = this.getServletContext();  
+  
+    String url = context.getInitParameter("url");  
+  
+    resp.getWriter().print(url);  
+  
+  
+}
+```
+
+### 请求转发
+
+#### 转发与重定向
+
+__重定向__
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as 浏览器
+    participant S as 服务器
+    participant T as 新地址/服务器B
+
+    B->>S: 请求 /old
+    S-->>B: 301/302 Location: /new
+    Note over B: 浏览器收到重定向，地址栏变为 /new
+    B->>T: 重新发起请求 /new
+    T-->>B: 返回 /new 内容
+    Note over B,T: 两次请求，客户端参与
+```
+__转发__
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as 浏览器
+    participant S as 服务器
+    participant R as 目标资源/组件
+
+    B->>S: 请求 /old
+    S->>R: 服务器内部转发 forward 到 /new
+    R-->>S: 返回 /new 处理结果
+    S-->>B: 返回结果
+    Note over B,S: 浏览器地址栏保持 /old，只有一次请求
+```
+
+### 读取资源文件
+
+Properties
+ - 在java目录下新建properties
+ - 在resource目录下新建properties
+发现：都被打包到了同一个路径下：classes，我们俗称这个路径为classpath
+
+```properties
+username=winskyx  
+password=123456
+```
+
+```java
+public class ServletDemo05 extends HttpServlet {  
+  
+    @Override  
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+        InputStream is = this.getServletContext().getResourceAsStream("/WEB-INF/classes/db.properties");  
+  
+        Properties properties = new Properties();  
+        properties.load(is);  
+        String username = properties.getProperty("username");  
+        String password = properties.getProperty("password");  
+  
+        resp.getWriter().print(username+":"+password);  
+    }  
+  
+    @Override  
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+        super.doPost(req, resp);  
+    }  
+}me+":"+password);  
+}
+```
+
+访问测试即可
