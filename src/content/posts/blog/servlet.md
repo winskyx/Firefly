@@ -319,3 +319,140 @@ public class ServletDemo05 extends HttpServlet {
 ```
 
 访问测试即可
+
+## HttpServletResponse
+
+web服务器接收到客户端的http请求，针对这个请求，分别创建一个代表请求的HttpServletRequset对象，代表响应的一个HttpServletResponse;
+- 如果要回去客户端请求过来的参数：找HttpServletRequest
+- 如果要给客户端响应一些信息：找HttpServletResponse
+### 简单分类
+
+__负责向浏览器发送数据的方法
+
+```java
+  ServletOutputStream getOutputStream() throws IOException;  
+  PrintWriter getWriter() throws IOException;
+```
+
+负责向浏览器发送响应头的方法
+
+```java
+void setCharacterEncoding(String var1);  
+  
+default void setCharacterEncoding(Charset encoding) {  
+    this.setCharacterEncoding(encoding.name());  
+}  
+  
+void setContentLength(int var1);  
+  
+void setContentLengthLong(long var1);  
+  
+void setContentType(String var1);  
+  
+void setBufferSize(int var1);  
+  
+int getBufferSize();  
+  
+void flushBuffer() throws IOException;  
+  
+void resetBuffer();  
+  
+boolean isCommitted();  
+  
+void reset();  
+  
+void setLocale(Locale var1);  
+  
+Locale getLocale();
+```
+
+```java
+int SC_CONTINUE = 100;  
+int SC_SWITCHING_PROTOCOLS = 101;  
+int SC_OK = 200;  
+int SC_CREATED = 201;  
+int SC_ACCEPTED = 202;  
+int SC_NON_AUTHORITATIVE_INFORMATION = 203;  
+int SC_NO_CONTENT = 204;  
+int SC_RESET_CONTENT = 205;  
+int SC_PARTIAL_CONTENT = 206;  
+int SC_MULTIPLE_CHOICES = 300;  
+int SC_MOVED_PERMANENTLY = 301;  
+int SC_MOVED_TEMPORARILY = 302;  
+int SC_FOUND = 302;  
+int SC_SEE_OTHER = 303;  
+int SC_NOT_MODIFIED = 304;  
+int SC_USE_PROXY = 305;  
+int SC_TEMPORARY_REDIRECT = 307;  
+int SC_PERMANENT_REDIRECT = 308;  
+int SC_BAD_REQUEST = 400;  
+int SC_UNAUTHORIZED = 401;  
+int SC_PAYMENT_REQUIRED = 402;  
+int SC_FORBIDDEN = 403;  
+int SC_NOT_FOUND = 404;  
+int SC_METHOD_NOT_ALLOWED = 405;  
+int SC_NOT_ACCEPTABLE = 406;  
+int SC_PROXY_AUTHENTICATION_REQUIRED = 407;  
+int SC_REQUEST_TIMEOUT = 408;  
+int SC_CONFLICT = 409;  
+int SC_GONE = 410;  
+int SC_LENGTH_REQUIRED = 411;  
+int SC_PRECONDITION_FAILED = 412;  
+int SC_REQUEST_ENTITY_TOO_LARGE = 413;  
+int SC_REQUEST_URI_TOO_LONG = 414;  
+int SC_UNSUPPORTED_MEDIA_TYPE = 415;  
+int SC_REQUESTED_RANGE_NOT_SATISFIABLE = 416;  
+int SC_EXPECTATION_FAILED = 417;  
+int SC_MISDIRECTED_REQUEST = 421;  
+int SC_UNPROCESSABLE_CONTENT = 422;  
+int SC_UPGRADE_REQUIRED = 426;  
+int SC_INTERNAL_SERVER_ERROR = 500;  
+int SC_NOT_IMPLEMENTED = 501;  
+int SC_BAD_GATEWAY = 502;  
+int SC_SERVICE_UNAVAILABLE = 503;  
+int SC_GATEWAY_TIMEOUT = 504;  
+int SC_HTTP_VERSION_NOT_SUPPORTED = 505;
+```
+
+响应的状态码
+
+### 常见应用
+1. 向浏览器输出消息
+2. 下载文件
+    1. 要获取下载文件的路径
+    2. 下载的文件名是什么
+    3. 设置想办法让浏览器能够支持下载我们需要的东西
+    4. 获取下载文件的输入流
+    5. 创建缓冲区
+    6. 获取OutputStream对象
+    7. 将FileoutPutStream流写入到Buffer缓冲区
+    8. 使用OutputStream将缓冲区中的数据输出到客户端
+
+
+ ```java
+ protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+//        1. 要获取下载文件的路径  
+        String realPath = "F:\\GitDownload\\JavaWeb-Servlet\\Response\\target\\classes\\1.jpg";  
+        System.out.println(realPath);  
+//        2. 下载的文件名是什么  
+        //当字符串字面值斜杠直接输出时，必须用双斜杠"\\"转义为单斜杠  
+        String filename = realPath.substring(realPath.lastIndexOf("\\") + 1);  
+//        3. 设置想办法让浏览器能够支持下载我们需要的东西  
+        resp.setHeader("Content-disposition","attachment;filename="+ URLEncoder.encode(filename, StandardCharsets.UTF_8));  
+//        4. 获取下载文件的输入流  
+        FileInputStream in = new FileInputStream(realPath);  
+//        5. 创建缓冲区  
+        int len = 0;  
+        byte[] buffer = new byte[1024];  
+//        6. 获取OutputStream对象  
+        ServletOutputStream out = resp.getOutputStream();  
+//        7. 将FileoutPutStream流写入到Buffer缓冲区  
+        while ((len=in.read(buffer))>0){  
+            out.write(buffer,0,len);  
+        }  
+        in.close();  
+        out.close();  
+//        8. 使用OutputStream将缓冲区中的数据输出到客户端  
+    }
+ ```
+## HttpServletRequest
