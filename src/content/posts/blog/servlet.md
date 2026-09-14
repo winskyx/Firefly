@@ -3,7 +3,7 @@ title: Servlet
 published: 2026-09-11
 description: 文章的描述
 date: 2026-09-11
-updated: 2026-09-12
+updated: 2026-09-14
 tags:
   - JavaWeb
 image: ./cover.jpg
@@ -455,4 +455,64 @@ int SC_HTTP_VERSION_NOT_SUPPORTED = 505;
 //        8. 使用OutputStream将缓冲区中的数据输出到客户端  
     }
  ```
+
+## 实现重定向
+
+![image.png](https://tu.winskyx.xyz/file/blog/wenzhang/1789363897472_image.png)
+
+B一个web资源收到客户端A请求后，B他会通知A客户端去访问另外一个web资源C，这个过程叫重定向
+常见场景:
+ - 用户登录
+```java
+default void sendRedirect(String location) throws IOException
+```
+测试
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+    resp.setHeader("Location","/Response_war/ImageServlet");  
+  
+    resp.setStatus(302);  
+  
+    resp.sendRedirect("/Response_war/ImageServlet");//重定向  
+}
+```
+面试题：请你聊聊重定向和转发的区别
+
+相同点：
+- 页面都会实现跳转
+
+不同点：
+- 请求转发的时候，url不会产生变化  307
+- 重定向的时候，url地址栏会发生变化  302
+
 ## HttpServletRequest
+
+HttpServletRequest代表客户端的请求，用户通过Http协议访问服务器，Http请求中的所有信息被封装到HttpServletRequest，通过这个HttpServletRequest的方法，获得客户端的所有信息
+
+
+
+### 获取前端传递的参数 请求转发
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+    req.setCharacterEncoding("utf-8");  
+    String username = req.getParameter("username");  
+  
+    String password = req.getParameter("password");  
+    String[] hobby = req.getParameterValues("hobby");  
+    System.out.println("====================");  
+  
+    System.out.println(username);  
+    System.out.println(password);  
+    System.out.println(Arrays.toString(hobby));  
+    System.out.println("====================");  
+  
+    System.out.println(req.getContextPath());  
+    //通过请求转发  
+    req.getRequestDispatcher("/success.jsp").forward(req,resp);  
+    //后台接收中文乱码问题  
+    //这里的 / 代表当前web应用  
+    resp.setCharacterEncoding("utf-8");  
+}
+```
+
+请求转发和重定向的区别
