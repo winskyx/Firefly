@@ -3,7 +3,7 @@ title: Servlet
 published: 2026-09-11
 description: 文章的描述
 date: 2026-09-11
-updated: 2026-09-14
+updated: 2026-09-16
 tags:
   - JavaWeb
 image: ./cover.jpg
@@ -584,3 +584,95 @@ URLEncoder.encode("李四","utf-16");//编码
 URLDecoder.decode(cookie.getValue(), "utf-16");//解码
 
 ```
+
+
+## Session
+
+什么是session：
+- 服务器会给每一个用户（浏览器）创建一个Session对象
+- 一个Session独占一个浏览器，只要浏览器没有关闭，这个Session就存在
+- 用户登录之后，整个网站它都可以访问 -->保存用户的信息，保存购物车的信息
+
+Session和cookie的区别：
+- Cookie是把用户的数据写给用户的浏览器，浏览器保存
+- Session是把用户的数据写到用户独占Session，服务端保存（保存重要的信息，减少资源的浪费）
+- Session对象由服务创建
+
+Session使用场景
+- 保存一个登录用户的信息；
+- 购物车信息；
+- 在整个网站中经常会使用的数据，我们将它保存在Session中；
+
+使用Session
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+  
+    //解决乱码问题  
+    req.setCharacterEncoding("utf-8");  
+    resp.setCharacterEncoding("utf-8");  
+    resp.setContentType("text/html;charset=utf-8");  
+  
+    //得到Session  
+    HttpSession session = req.getSession();  
+  
+    //给Session中存东西  
+    session.setAttribute("name", new Person("winskyx",22));  
+  
+    //获取Session的ID  
+    String id = session.getId();  
+  
+    //判断是不是新的Session是不是新创建  
+    if (session.isNew()) {  
+        resp.getWriter().write("session创建成功，sessionId为:"+id);  
+    }else {  
+        resp.getWriter().write("session已经在服务器中存在：sessionID为"+id);  
+    }  
+  
+    //Session创建的时候做了什么事情：  
+    Cookie cookie = new Cookie("JSESSIONID",id);  
+    resp.addCookie(cookie);  
+  
+}
+```
+得到session
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+    //解决乱码问题  
+    req.setCharacterEncoding("utf-8");  
+    resp.setCharacterEncoding("utf-8");  
+    resp.setContentType("text/html;charset=utf-8");  
+  
+    //得到Session  
+    HttpSession session = req.getSession();  
+  
+   Person name = (Person) session.getAttribute("name");  
+  
+    System.out.println(name);  
+  
+    PrintWriter writer = resp.getWriter();  
+    writer.write(name.toString());  
+  
+  
+}
+```
+
+销毁session
+```java
+protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {  
+    HttpSession session = req.getSession();  
+    session.removeAttribute("name");  
+    session.invalidate();  
+}
+```
+
+会话自动过期
+```xml
+<!--    设置Session默认的失效时间-->  
+    <session-config>  
+<!--        15分钟Session自动失效，以分钟为单位-->  
+        <session-timeout>15</session-timeout>  
+    </session-config>
+```
+
+
+客户端第一次请求，服务器会创建一个session，每个session都会有唯一一个sessionid用户区分不同的session，服务器在产生一个cookie，cookie的name是sessionid，值sessionid
