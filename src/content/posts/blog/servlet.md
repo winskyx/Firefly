@@ -676,3 +676,106 @@ protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws Se
 
 
 客户端第一次请求，服务器会创建一个session，每个session都会有唯一一个sessionid用户区分不同的session，服务器在产生一个cookie，cookie的name是sessionid，值sessionid
+
+## JSP
+### 什么是JSP
+
+Java Server Pages:java服务器端页面，也和Servlet一样，用于动态Web技术
+最大的特点：
+- 写JSP就像在写HTML
+- 区别
+   - HTML只给用户提供静态的数据
+   - JSP页面中可以嵌入JAVA代码，为用户提供动态数据
+### JSP原理
+__JSP是怎么运行的
+- 代码层面没有任何问题
+- 服务器内部工作
+  tomcat中有一个work目录
+  IDEA中使用Tomcat
+
+IDEA Tomcat的工作空间 
+
+"C:\Users\AcidEnzyme\AppData\Local\JetBrains\IntelliJIdea2023.3\tomcat\
+
+
+发现页面转变成了JAVA程序
+![image.png](https://tu.winskyx.xyz/file/blog/wenzhang/1789541686845_image.png)
+
+__浏览器向服务器发送请求，不管访问什么资源，其实都是在访问Servlet
+
+JSP最终也会被转换成一个JAVA类
+
+JSP本质上就是一个Servlet
+
+
+```java
+//初始化
+public void _jspInit() {
+  }
+//销毁
+public void _jspDestroy() {
+  }
+//JSPService
+public void _jspService(final jakarta.servlet.http.HttpServletRequest request, final jakarta.servlet.http.HttpServletResponse response)
+      throws java.io.IOException, jakarta.servlet.ServletException {
+```
+1.判断请求
+2.内置一些对象
+```java
+final jakarta.servlet.jsp.PageContext pageContext;//页面上下文
+
+jakarta.servlet.http.HttpSession session = null;//session
+
+final jakarta.servlet.ServletContext application;//applicationcontext
+
+final jakarta.servlet.ServletConfig config;//config
+
+jakarta.servlet.jsp.JspWriter out = null;//out
+
+final java.lang.Object page = this;//page:当前页
+
+final jakarta.servlet.http.HttpServletRequest request//请求
+
+final jakarta.servlet.http.HttpServletResponse response//响应
+
+```
+
+输出页面前增加的代码
+
+```java
+response.setContentType("text/html");//设置响应的页面类型
+
+pageContext = _jspxFactory.getPageContext(this, request, response,null, true, 8192, true);
+
+_jspx_page_context = pageContext;
+
+application = pageContext.getServletContext();
+
+config = pageContext.getServletConfig();
+
+session = pageContext.getSession();
+
+out = pageContext.getOut();
+
+_jspx_out = out;
+
+```
+
+以上的这些个对象我们可以在JSP页面中直接使用
+
+
+
+用户访问网站 网站内存在web容器 JSP页面转换为JAVA文件 编译获得xxx_jsp.class
+
+用户真正拿到的，就是服务器处理完毕的class的对象，就是Servlet
+
+
+在JSP页面中：
+只要是JAVA代码就会原封不动地输出；
+如果是HTML代码，就会被转换为：
+```java
+out.write("\r\n");
+```
+这样的格式输出到前端
+
+## JSP基础语法
