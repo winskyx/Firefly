@@ -436,4 +436,8 @@ Select * from emp where ename like 'M%';
 - **%M%** : 表示查询包含M的所有内容。
 - **%M_** : 表示查询以M在倒数第二位的所有内容。
 
-IN
+
+## 联表查询
+
+
+
