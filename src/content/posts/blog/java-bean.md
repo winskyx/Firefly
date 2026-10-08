@@ -1,7 +1,7 @@
 ---
 title: JavaBean
 published: 2026-09-17
-description:
+description: 遵循特定命名和结构约定的可重用类
 date: 2026-09-17
 updated: 2026-09-17
 tags:
