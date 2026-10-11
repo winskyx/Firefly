@@ -470,3 +470,461 @@ __7种Join理论
 
 ## 分页和排序
 
+
+排序 : __order by 字段名 DESC(降序) || ASC （升序）
+
+分页：__limit 第几条数据开始，每页多少条
+
+-- LIMIT    0,5    1~5
+-- LIMIT    1,5    2~5
+
+例 : __Limit 1,5
+
+## 子查询
+
+```sql
+SELECT s.studentno ,studentname
+FROM student s
+---
+WHERE studentno IN(
+	SELECT studentno 
+	FROM result 
+	WHERE studentresult >= 80
+)
+---
+```
+
+## 分组和过滤
+
+Group by [字段] ---分组
+having 条件   - -- 过滤
+
+```sql
+-- 顺序
+(7) SELECT
+(8) DISTINCT <select_list>
+	(1) FROM  <main_table>
+	(3) <join_type> JOIN <join_table>
+	(2) ON <join_condition>
+	(4) WHERE <where_condition>
+	(5) GROUP BY <group_by_list>
+	(6) HAVING <having_condition>   ---(过滤分组后的信息，条件和where是一样的，位置不同)
+	(9) ORDER BY <order_by_condition>
+	(10) LIMIT <limit_number>
+
+```
+
+
+# MySQL函数
+---
+
+[MySQL ：： MySQL 8.0 参考手册 ：： 14.1 内置函数与操作符参考](https://dev.mysql.com/doc/refman/8.0/en/built-in-function-reference.html)
+
+
+## 聚合函数
+
+
+| 函数名称    | 描述  |
+| ------- | --- |
+| COUNT() | 计数  |
+| SUM()   | 求和  |
+| AVG()   | 平均值 |
+| MAX()   | 最大值 |
+| MIN()   | 最小值 |
+| ...     |     |
+
+# 数据库级别的MD5加密（选）
+---
+什么是MD5？
+主要增强算法复杂度和不可逆性
+MD5不可逆，具体的值的MD5是一样的
+```sql
+--数据
+INSERT INTO testmd5 values(1,'zhangsan','123456'),(2,'lisi','123456')
+```
+
+```sql
+---加密，插入时加密
+insert into test values(4,'xiaoming',MD5('123456'))
+
+--校验：将用户传进来的密码，进行md5加密，然后比对加密后的值
+
+select * from testmd5 where `name`='xiaoming' and pwd=MD5('123456')
+
+```
+
+
+# 事务
+---
+## 什么是事务
+
+<font color="red">要么都成功，要么都失败</font>
+
+1、SQL执行   A 给 B 转账      A  1000   ----> 200   B 200
+2、SQL执行   B 收到 A 的钱   A   800     --->  B  400
+
+将一组SQL放在一个批次中去执行
+
+>事务原则:  ACID 原则  原子性  一致性 隔离性  持久性
+
+
+**原子性(Atomicity)**
+`单个事务，为一个不可分割的最小工作单元`，整个事务中的所有操作要么全部commit成功，要么全部失败rollback，对于一个事务来说，不可能只执行其中的一部分SQL操作，这就是事务的原子性。
+
+事务被视为一个不可分割的最小单位，它要么完全执行，要么完全不执行。
+
+**一致性(Consistency)**
+数据库总是从一个一致性的状态转换到另外一个一致性的状态。在前面的例子中， 一致性确保了，即使在执行第三、四条语句之间时系统崩潰，信用卡账户也不会损 失100块，因为事务最终没有提交，所以事务中所做的修改也不会保存到数据库中，保证数据一致性
+
+一致性保证了事务的执行将数据库从一个一致的状态转变到另一个一致的状态。
+ 
+ **持久性(Durability)**
+
+一旦事务提交，则其所做的修改就会永久保存到数据库中。此时即使系统崩溃，修改的数据也不会丢失。
+
+持久性意味着一旦事务被提交，它对数据库的修改就是永久性的，即使系统发生故障也不会丢失。
+
+ **隔离性(Isolation)**
+
+通常来说，一个事务所做的修改在最终提交以前，对其他事务是不可见的。在前面 的例子中，当执行完第三条语句、第四条语句还未开始时，此时有另外一个账户查询余额SQL开始运行，则其看到的信用卡账户的余额并没有被减去100元。后面我们讨论隔离级别(Isolation level)的时候，会发现为什么我们要说事务通常来说是不可见的。
+
+隔离性是指当多个事务同时对数据库进行操作时，每个事务都是独立的，一个事务的操作不会影响到其他事务。
+
+
+>隔离所导致的一些问题
+
+**脏读**
+事务 A 读到了事务 B **未提交**的数据。若 B 回滚，A 读到的就是无效数据。
+
+**不可重复读**
+同一事务内两次读同一行，结果不同。因为期间另一个事务修改并提交了该行。
+
+**幻读**
+
+同一事务内两次执行同一范围查询，结果集行数不同。因为**期间另一个事务插入或删除了符合条件的行。
+
+**丢失更新**
+
+两个事务同时读同一数据，各自修改后提交，后提交的覆盖了先提交的。  
+例：库存 100，T1、T2 都读到 100，T1 改成 90，T2 改成 80，T1 的更新丢失。
+
+**读偏斜**
+
+事务内读取多个相关数据时，读到了不一致的快照。  
+例：转账中先读 A 账户旧值，再读 B 账户新值，导致总额对不上。
+
+**写偏斜**
+
+两个事务读取相同的数据集，然后分别修改不同的数据，最终组合起来违反业务约束。  
+经典例子：医生值班要求至少一人在岗。T1、T2 都读到两人在岗，T1 让 A 请假，T2 让 B 请假，结果无人值班。
+
+**序列化异常**
+
+并发执行的结果无法对应任何串行执行顺序，这是可串行化隔离要解决的根本问题。
+
+| 隔离级别         | 效果                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------- |
+| 读未提交（RU）     | 一个事务还没提交时，它做的变更就能被别的事务看到。（别的事务指同一时间进行的增删改查操作）                                                             |
+| 读提交（RC）      | 一个事务提交（commit）之后，它做的变更才会被其他事务看到。                                                                          |
+| 可重复读（RR）     | 一个事务执行过程中看到的数据，总是跟这个事务在启动时看到的数据是一致的。<br>当然在可重复读隔离级别下，未提交变更对其他事务也是不可见的。                                    |
+| 串行（xíng）化（S） | 正如物理书上写的，串行是单线路，顾名思义在 MySQL 中同一时刻只允许单个事务执行，“写”会加“写锁”，“读”会加“读锁”。<br>当出现读写锁冲突的时候，后访问的事务必须等前一个事务执行完成，才能继续执行。 |
+
+
+>执行事务
+
+MySQL默认开启事务自动提交
+
+```sql
+SET autocommit = 0 /*关闭/
+SET autocommit = 1/*开启（默认的）/
+```
+
+
+# 索引
+---
+索引是数据库中用来提升查询效率的一种数据结构。它能快速定位数据，大大减少需要扫描的数据量
+
+## 索引的分类
+- 主键索引 (PRIMARY KEY
+  - 唯一的标识，主键不可重复，只能有一个列作为主键
+- 唯一索引 (UNIQUE KEY)
+  - 避免重复的列出现，唯一索引可以重复，多个列都可以标识为唯一索引
+- 常规索引 (KEY/INDEX)
+  - 默认的，index。key关键字来设置
+- 全文索引 (FullText)
+  - 在特定的数据库引擎下才有，MyISAM
+  - 快速定位数据
+
+
+## 索引的使用
+
+1、在创建表的时候给字段增加索引
+2、创建完毕后，增加索引
+
+创建索引有两种方式：
+
+**create 索引类型 索引名 on 表（字段）
+
+和 
+
+**alter table 表名 add 索引类型 索引名（字段）
+
+
+索引在小数据量的时候，用处不大，在大量数据时，区别十分明显
+
+## 索引原则
+
+- 索引不是越多越好
+- 不要对经常变动数据加索引
+- 小数据量的表不需要加索引
+- 索引一般加载常用来查询的字段上
+
+>索引的数据结构
+
+Hash类型的索引
+
+Btree：InnoDB的默认结构
+
+
+## MySQL备份
+
+为什么要备份：
+- 保存重要的数据不丢失
+- 数据转移
+MySQL数据库备份的方式
+- 直接拷贝物理文件
+- 在SQLyog这种可视化工具中手动导出
+- 使用命令行 mysqldump命令
+
+**可视化导出
+![image.png](https://tu.winskyx.xyz/file/blog/wenzhang/1791678750253_image.png)
+![image.png](https://tu.winskyx.xyz/file/blog/wenzhang/1791678765153_image.png)
+
+**命令行导出
+
+```sql
+操作        主机         用户   密码   数据库  数据库表  >物理存储位置
+mysqldump -hlocalhost -uroot -p123456 test student >D:/a.sql
+
+mysqldump -hlocalhost -uroot -p123456 test 表一 表二 表三 >D:/a.sql
+
+mysqldump -hlocalhost -uroot -p123456 test  >D:/a.sql
+```
+
+![image.png](https://tu.winskyx.xyz/file/blog/wenzhang/1791679048082_image.png)
+
+
+**导入
+
+**命令行登入后
+
+Use 对应的数据库(如果导入表)
+
+使用 【Source 物理地址数据库备份文件路径】
+
+**未登录
+
+```
+mysql -u用户名 -p密码 库名<备份文件路径
+```
+
+
+# 规范数据库设计
+---
+## 为什么要设计
+
+<font color="blue">当数据库比较复杂的时候，我们需要规范设计数据库</font>
+
+糟糕的数据库设计：
+- 数据冗余，浪费空间
+- 数据插入和删除都会麻烦、异常【屏蔽使用物理外键】
+- 程序的性能差
+
+良好的数据库设计：
+- 节省内存空间
+- 保证数据库的完整性
+- 方便我们开发系统
+
+**软件开发中，关于数据库的设计
+- 分析需求：分析业务和需要处理的数据库需求
+- 概要设计：设计关系图E-R图
+
+**设计数据库的步骤（个人博客）：
+- 分析 
+ - 用户表（登录注销，个人信息，写博客，创建分类）
+ - 分类表（文章分类，创建者）
+ - 文章表（文章的信息）
+ - 友链表（友链信息）
+ - 自定义表
+
+- 标识实体（把需求落地到每个表）
+
+- 标识实体之间的关系
+ - 写博客：user->blog
+ - 创建分类：user->category
+ - 关注：user->user
+ - 友链：links
+ - 评论：user-user-blog
+
+## 三大范式
+
+**为什么需要数据规范化
+ - 信息重复
+ - 更新异常
+ - 插入异常
+   - 无法正常显示信息
+ - 删除异常
+   - 丢失有效的信息
+
+>三大范式
+
+**第一范式（1NF）
+
+原子性：保证每一列不可再分
+
+**第二范式（2NF）
+
+原文：[数据库设计三大范式 - Ruthless - 博客园](https://www.cnblogs.com/linjiqin/archive/2012/04/01/2428695.html)
+
+前提：满足第一范式
+
+还要求数据库表中的每个实例或行必须被唯一标识，满足实体的属性完全依赖于主关键字
+
+**也就是说在一个数据库表中，一个表中只能保存一种数据，不可以把多种数据保存在同一张数据库表中。
+
+
+
+**第三范式(3NF)
+
+前提：满足第二范式
+
+**第三范式需要确保数据表中的每一列数据都和主键直接相关，而不能间接相关。
+
+
+
+# JDBC
+---
+
+
+1.创建空项目
+
+
+2.导入JDBC驱动
+
+
+3.编写测试代码
+
+
+```java
+package com.winskyx.lesson01;  
+  
+import java.sql.*;  
+  
+public class JDBCFirstDemo {  
+    public static void main(String[] args) throws ClassNotFoundException, SQLException {  
+        //加载驱动  
+        Class.forName("com.mysql.jdbc.Driver");//固定写法  
+  
+        //用户信息和URL  
+        String url = "jdbc:mysql://localhost:3306/jdbcstudy?userUnicode=true&characterEncoding=utf8&useSSL=true";  
+        String username = "root";  
+        String password = "123456";  
+  
+  
+        //连接成功，数据库对象 Connection 代表数据库  
+        Connection connection = DriverManager.getConnection(url, username, password);  
+  
+        //执行SQL的对象   Statement执行SQL的对象  
+        Statement statement = connection.createStatement();  
+  
+  
+        //执行SQL的对象去执行SQL，可能存在结果,查看返回结果  
+        String sql = "SELECT * FROM users";  
+  
+  
+        ResultSet resultSet = statement.executeQuery(sql);//返回的结果集，结果集中封装了我们全部查询出来的结果  
+  
+        while (resultSet.next()){  
+            //不知道类型可以为getObject  
+            System.out.println("id="+resultSet.getObject("id"));;  
+            System.out.println("username="+resultSet.getObject("username"));;  
+            System.out.println("password="+resultSet.getObject("password"));;  
+            System.out.println("================");  
+        }  
+  
+        //释放连接  
+  
+        resultSet.close();  
+  
+        statement.close();  
+  
+        connection.close();  
+  
+  
+  
+    }  
+  
+}
+```
+
+结果
+
+```txt
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+id=1
+username=lisi
+password=123456
+================
+id=2
+username=zhangsan
+password=123456
+================
+id=3
+username=wangwu
+password=123456
+================
+id=4
+username=zhaoliu
+password=123456
+================
+id=5
+username=sunqi
+password=123456
+================
+id=6
+username=zhouba
+password=123456
+================
+id=7
+username=wujiu
+password=123456
+================
+id=8
+username=zhengshi
+password=123456
+================
+id=9
+username=qianyi
+password=123456
+================
+id=10
+username=chener
+password=123456
+================
+id=11
+username=liuyi
+password=123456
+================
+```
+
+步骤：
+
+1、加载驱动
+
+2、连接数据库DriverManager
+
+3、获得执行sql的对象 statement
+
+4、获得返回的结果集
+
+5、释放连接
